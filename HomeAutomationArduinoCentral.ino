@@ -3,50 +3,60 @@
 #include <SPI.h>
 #include <Ethernet.h>
 
-#define DHTPIN 5     // what pin we're connected to
-#define DHTTYPE DHT22   // DHT 22  (AM2302)
+#define DHTPIN 5 // PINO DO SENSOR DHT22 (TEMPERATURA E UMIDADE)
+#define DHTTYPE DHT22   // DHT 22 (AM2302)
 DHT dht(DHTPIN, DHTTYPE);
 
 byte mac[] = {
   0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED
 };
 
-const unsigned long half_hour = 5000UL;//1800000UL;
-float tempC = 0.0;
-float humidity = 0.0;
-
-const int buttonPin = 2;    // the number of the pushbutton pin
-const int ledPin = 13;      // the number of the LED pin
+const int buttonPins[] = {
+    1, //buttons/room
+    2, //buttons/bedroom
+    3  //buttons/kitchen
+  };
+const int outputPins[] = {
+    11, //lights/room
+    12, //lights/bedroom 
+    13  //lights/kitchen
+  };
 const char macstr[] = "deadbeeffeed";
 const String clientName = String("arduino:") + macstr;
 const String topicName = String("status/fmt/json");
+const long debounceDelay = 50;
+const unsigned long statusIntervalRepeat = 5000UL;//1800000UL;
 
 IPAddress ip(192, 168, 0, 120);
 IPAddress server(192, 168, 0, 102);
 EthernetClient ethClient;
 PubSubClient client(ethClient);
 
-int ledState = HIGH;         // the current state of the output pin
-int buttonState;             // the current reading from the input pin
-int lastButtonState = LOW;   // the previous reading from the input pin
-long lastDebounceTime = 0;  // the last time the output pin was toggled
-long debounceDelay = 50;    // the debounce time; increase if the output flickers
+int buttonStates[3];
+int lastButtonStates[3] = {LOW, LOW, LOW};
+long lastDebounceTimes[] = {0, 0, 0};
+long lastStatusSentTime = 0;
+float temperature = 0.0;
+float humidity = 0.0;
 
 void setup() {
   Serial.begin(57600);
 
+  for (int i=0; i<3; i++) {
+    pinMode(buttonPins[i], INPUT);
+  }
+  
+  for (int i=0; i<3; i++) {
+    pinMode(outputPins[i], OUTPUT);
+    digitalWrite(outputPins[i], LOW);
+  }
+  
   client.setServer(server, 1883);
   client.setCallback(callback);
   
   Ethernet.begin(mac, ip);
 
   dht.begin();
-
-  pinMode(buttonPin, INPUT);
-  pinMode(ledPin, OUTPUT);
-
-  // set initial LED state
-  digitalWrite(ledPin, ledState);
 
   delay(1500);
 }
@@ -57,38 +67,39 @@ void loop() {
   }
   client.loop();
 
-  //publishStatus();
-  
-  // read the state of the switch into a local variable:
-  int reading = digitalRead(buttonPin);
-
-  // check to see if you just pressed the button
-  // (i.e. the input went from LOW to HIGH),  and you've waited
-  // long enough since the last press to ignore any noise:
-
-  // If the switch changed, due to noise or pressing:
-  if (reading != lastButtonState) {
-    // reset the debouncing timer
-    lastDebounceTime = millis();
+  if ((millis() - lastStatusSentTime) > statusIntervalRepeat) {
+    publishStatus();
+    lastStatusSentTime = millis();
   }
 
-  if ((millis() - lastDebounceTime) > debounceDelay) {
-    if (reading != buttonState) {
-      buttonState = reading;
-      client.publish("switches/room", "touched");
+  for (int i=0; i<3; i++) {
+    int reading = digitalRead(buttonPins[i]);
+    if (reading != lastButtonStates[i]) {
+      lastDebounceTimes[i] = millis();
     }
+    if ((millis() - lastDebounceTimes[i]) > debounceDelay) {
+      if (reading != buttonStates[i]) {
+        buttonStates[i] = reading;
+        if (reading == HIGH) {
+          if (i == 0) {
+            client.publish("buttons/room", "1");
+          } else if (i == 1) {
+            client.publish("buttons/bedroom", "1");
+          } else if (i == 2) {
+            client.publish("buttons/kitchen", "1");
+          }
+        }
+      }
+    }
+    lastButtonStates[i] = reading;
   }
-
-  // save the reading.  Next time through the loop,
-  // it'll be the lastButtonState:
-  lastButtonState = reading;
 }
 
 String buildJson() {
   String data = "{";
   data+="\n";
   data+="\"temperature\": ";
-  data+=tempC;
+  data+=temperature;
   data+= ",";
   data+="\n";
   data+="\"humidity\": ";
@@ -100,8 +111,8 @@ String buildJson() {
 
 void publishStatus() {  
   humidity = dht.readHumidity();
-  tempC = dht.readTemperature();
-  if (!isnan(tempC) && !isnan(humidity)) {
+  temperature = dht.readTemperature();
+  if (!isnan(temperature) && !isnan(humidity)) {
     // Once connected, publish the status...
     char topicStr[26];
     topicName.toCharArray(topicStr,26);
@@ -132,14 +143,23 @@ void callback(char* topic, byte* payload, unsigned int length) {
     Serial.print((char)payload[i]);
   }
   Serial.println();
-    
-  if (strcmp(topic, "lights/room1") == 0) {
-    Serial.println("Mensagem para luz room1");
-    if (payload[0] == '1') {
-      digitalWrite(ledPin, HIGH);
-    } else {
-      digitalWrite(ledPin, LOW);
-    }
+
+  int index = -1;
+  int newState = LOW;
+  if (payload[0] == '1') {
+    newState = HIGH;
+  }
+  
+  if (strcmp(topic, "lights/room") == 0) {
+    index = 0;
+  } else if (strcmp(topic, "lights/bedroom") == 0) {
+    index = 1;
+  } else if (strcmp(topic, "lights/kitchen") == 0) {
+    index = 2;
+  }
+
+  if (index >= 0) {
+    digitalWrite(outputPins[index], newState);
   }
 }
 
@@ -150,8 +170,8 @@ void reconnect() {
     clientName.toCharArray(clientStr,34);
     if (client.connect(clientStr)) {
       Serial.println("connected");
-      client.subscribe("lights/room1");
-      client.subscribe("lights/room2");
+      client.subscribe("lights/room");
+      client.subscribe("lights/bedroom");
       client.subscribe("lights/kitchen");
     } else {
       Serial.print("failed, rc=");
