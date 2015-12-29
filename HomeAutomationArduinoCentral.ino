@@ -23,7 +23,7 @@ const int outputPins[] = {
   };
 const char macstr[] = "deadbeeffeed";
 const String clientName = String("arduino:") + macstr;
-const String topicName = String("status/fmt/json");
+const String statusTopicName = String("status/fmt/json");
 const long debounceDelay = 50;
 const unsigned long statusIntervalRepeat = 5000UL;//1800000UL;
 
@@ -113,15 +113,14 @@ void publishStatus() {
   humidity = dht.readHumidity();
   temperature = dht.readTemperature();
   if (!isnan(temperature) && !isnan(humidity)) {
-    // Once connected, publish the status...
     char topicStr[26];
-    topicName.toCharArray(topicStr,26);
+    statusTopicName.toCharArray(topicStr,26);
   
     String json = buildJson();
     char jsonStr[200];
     json.toCharArray(jsonStr,200);
     
-    boolean pubresult = client.publish(topicStr, jsonStr);
+    boolean pubresult = client.publish(topicStr, jsonStr, true);
     Serial.print("attempt to send ");
     Serial.println(jsonStr);
     Serial.print("to ");
