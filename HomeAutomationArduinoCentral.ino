@@ -3,7 +3,7 @@
 #include <SPI.h>
 #include <Ethernet.h>
 
-#define DHTPIN 5 // PINO DO SENSOR DHT22 (TEMPERATURA E UMIDADE)
+#define DHTPIN 6 // PINO DO SENSOR DHT22 (TEMPERATURA E UMIDADE)
 #define DHTTYPE DHT22   // DHT 22 (AM2302)
 DHT dht(DHTPIN, DHTTYPE);
 
@@ -12,38 +12,44 @@ byte mac[] = {
 };
 
 const int buttonPins[] = {
-    1, //buttons/room
-    2, //buttons/bedroom
-    3  //buttons/kitchen
+    23, //buttons/room
+    24, //buttons/bedroom
+    25  //buttons/kitchen
   };
 const int outputPins[] = {
-    11, //lights/room
-    12, //lights/bedroom 
-    13  //lights/kitchen
+    32, //lights/room
+    33, //lights/bedroom 
+    34  //lights/kitchen
   };
-const char macstr[] = "deadbeeffeed";
-const String clientName = String("arduino:") + macstr;
-const String statusTopicName = String("status/fmt/json");
+const char clientName[] = "arduino:home";
+const char sensorsStatusTopicName[] = "sensors/status";
+const char switchesStatusTopicName[] = "switches/status";
+
 const long debounceDelay = 50;
-const unsigned long statusIntervalRepeat = 5000UL;//1800000UL;
+const unsigned long statusIntervalRepeat = 30000UL;//1800000UL;
 
 IPAddress ip(192, 168, 0, 120);
-IPAddress server(192, 168, 0, 102);
+IPAddress server(192, 168, 0, 101);
 EthernetClient ethClient;
 PubSubClient client(ethClient);
 
-int buttonStates[3];
+int buttonStates[3] = {LOW, LOW, LOW};
 int lastButtonStates[3] = {LOW, LOW, LOW};
 long lastDebounceTimes[] = {0, 0, 0};
 long lastStatusSentTime = 0;
 float temperature = 0.0;
 float humidity = 0.0;
 
+int lightRoomState = LOW;
+int lightBedroomState = LOW;
+int lightKitchenState = LOW;
+
 void setup() {
   Serial.begin(57600);
 
   for (int i=0; i<3; i++) {
     pinMode(buttonPins[i], INPUT);
+    lastDebounceTimes[i] = millis() - 1000;
   }
   
   for (int i=0; i<3; i++) {
@@ -68,7 +74,7 @@ void loop() {
   client.loop();
 
   if ((millis() - lastStatusSentTime) > statusIntervalRepeat) {
-    publishStatus();
+    publishSensorsStatus();
     lastStatusSentTime = millis();
   }
 
@@ -95,7 +101,7 @@ void loop() {
   }
 }
 
-String buildJson() {
+String buildSensorsJson() {
   String data = "{";
   data+="\n";
   data+="\"temperature\": ";
@@ -109,22 +115,40 @@ String buildJson() {
   return data;
 }
 
-void publishStatus() {  
+bool publishSwitchesStatus() {
+  String data = "{";
+  data+="\n";
+  data+="\"room\": ";
+  data+=lightRoomState == LOW ? "0" : "1";
+  data+= ",";
+  data+="\n";
+  data+="\"bedroom\": ";
+  data+=lightBedroomState == LOW ? "0" : "1";
+  data+= ",";
+  data+="\n";
+  data+="\"kitchen\": ";
+  data+=lightKitchenState == LOW ? "0" : "1";
+  data+="\n";
+  data+="}";
+  
+  char jsonStr[200];
+  data.toCharArray(jsonStr,200);
+  return client.publish("switches/status", jsonStr, true);
+}
+
+void publishSensorsStatus() {  
   humidity = dht.readHumidity();
   temperature = dht.readTemperature();
   if (!isnan(temperature) && !isnan(humidity)) {
-    char topicStr[26];
-    statusTopicName.toCharArray(topicStr,26);
-  
-    String json = buildJson();
+    String json = buildSensorsJson();
     char jsonStr[200];
     json.toCharArray(jsonStr,200);
     
-    boolean pubresult = client.publish(topicStr, jsonStr, true);
+    boolean pubresult = client.publish(sensorsStatusTopicName, jsonStr, true);
     Serial.print("attempt to send ");
     Serial.println(jsonStr);
     Serial.print("to ");
-    Serial.println(topicStr);
+    Serial.println(sensorsStatusTopicName);
     if (pubresult)
       Serial.println("successfully sent");
     else
@@ -144,39 +168,37 @@ void callback(char* topic, byte* payload, unsigned int length) {
   Serial.println();
 
   int index = -1;
-  int newState = LOW;
-  if (payload[0] == '1') {
-    newState = HIGH;
-  }
+  int newState = payload[0] == '1' ? HIGH : LOW;
   
-  if (strcmp(topic, "lights/room") == 0) {
+  if (strcmp(topic, "lights/room/set") == 0) {
     index = 0;
-  } else if (strcmp(topic, "lights/bedroom") == 0) {
+    lightRoomState = newState;
+  } else if (strcmp(topic, "lights/bedroom/set") == 0) {
     index = 1;
-  } else if (strcmp(topic, "lights/kitchen") == 0) {
+    lightBedroomState = newState;
+  } else if (strcmp(topic, "lights/kitchen/set") == 0) {
     index = 2;
+    lightKitchenState = newState;
   }
 
   if (index >= 0) {
     digitalWrite(outputPins[index], newState);
+    publishSwitchesStatus();
   }
 }
 
 void reconnect() {
   while (!client.connected()) {
     Serial.print("Attempting MQTT connection...");
-    char clientStr[34];
-    clientName.toCharArray(clientStr,34);
-    if (client.connect(clientStr)) {
+    if (client.connect(clientName)) {
       Serial.println("connected");
-      client.subscribe("lights/room");
-      client.subscribe("lights/bedroom");
-      client.subscribe("lights/kitchen");
+      client.subscribe("lights/room/set");
+      client.subscribe("lights/bedroom/set");
+      client.subscribe("lights/kitchen/set");
     } else {
       Serial.print("failed, rc=");
       Serial.print(client.state());
       Serial.println(" try again in 5 seconds");
-      // Wait 5 seconds before retrying
       delay(5000);
     }
   }
