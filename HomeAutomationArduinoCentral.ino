@@ -43,6 +43,7 @@ float humidity = 0.0;
 int lightRoomState = LOW;
 int lightBedroomState = LOW;
 int lightKitchenState = LOW;
+bool firstLoopExecuted = false;
 
 void setup() {
   Serial.begin(57600);
@@ -73,6 +74,12 @@ void loop() {
   }
   client.loop();
 
+  if (!firstLoopExecuted) {
+    publishSensorsStatus();
+    publishSwitchesStatus();
+    firstLoopExecuted = true;
+  }
+  
   if ((millis() - lastStatusSentTime) > statusIntervalRepeat) {
     publishSensorsStatus();
     lastStatusSentTime = millis();
@@ -145,13 +152,9 @@ void publishSensorsStatus() {
     json.toCharArray(jsonStr,200);
     
     boolean pubresult = client.publish(sensorsStatusTopicName, jsonStr, true);
-    Serial.print("attempt to send ");
+    Serial.print("sending ");
     Serial.println(jsonStr);
-    Serial.print("to ");
-    Serial.println(sensorsStatusTopicName);
-    if (pubresult)
-      Serial.println("successfully sent");
-    else
+    if (!pubresult)
       Serial.println("unsuccessfully sent");
   } else {
     Serial.println("Failed to read from DHT");
@@ -159,9 +162,8 @@ void publishSensorsStatus() {
 }
 
 void callback(char* topic, byte* payload, unsigned int length) {
-  Serial.print("Message arrived [");
   Serial.print(topic);
-  Serial.print("] ");
+  Serial.print(":");
   for (int i=0;i<length;i++) {
     Serial.print((char)payload[i]);
   }
