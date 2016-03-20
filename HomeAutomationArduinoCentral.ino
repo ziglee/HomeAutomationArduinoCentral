@@ -1,3 +1,7 @@
+
+/*
+  HomeAutomationArduinoCentral v1.0.1
+*/
 #include <PubSubClient.h>
 #include <DHT.h>
 #include <SPI.h>
