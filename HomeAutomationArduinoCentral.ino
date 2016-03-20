@@ -278,43 +278,43 @@ void callback(char* topic, byte* payload, unsigned int length) {
   if (strcmp(topic, "relays/lights_room_balcony/set") == 0) {
     index = 0;
     relayLightsRoomBalconyState = newState;
-  } else if (strcmp(topic, "lights/lights_room/set") == 0) {
+  } else if (strcmp(topic, "relays/lights_room/set") == 0) {
     index = 1;
     relayLightsRoomState = newState;
-  } else if (strcmp(topic, "lights/lights_room_kitchen/set") == 0) {
+  } else if (strcmp(topic, "relays/lights_room_kitchen/set") == 0) {
     index = 2;
     relayLightsRoomKitchenState = newState;
-  } else if (strcmp(topic, "lights/lights_kitchen/set") == 0) {
+  } else if (strcmp(topic, "relays/lights_kitchen/set") == 0) {
     index = 3;
     relayLightsKitchenState = newState;
-  } else if (strcmp(topic, "lights/lights_bathroom/set") == 0) {
+  } else if (strcmp(topic, "relays/lights_bathroom/set") == 0) {
     index = 4;
     relayLightsBathroomState = newState;
-  } else if (strcmp(topic, "lights/lights_bathroom_mirror/set") == 0) {
+  } else if (strcmp(topic, "relays/lights_bathroom_mirror/set") == 0) {
     index = 5;
     relayLightsBathroomMirrorState = newState;
-  } else if (strcmp(topic, "lights/lights_entry_balcony/set") == 0) {
+  } else if (strcmp(topic, "relays/lights_entry_balcony/set") == 0) {
     index = 6;
     relayLightsEntryBalconyState = newState;
-  } else if (strcmp(topic, "lights/lights_bedroom/set") == 0) {
+  } else if (strcmp(topic, "relays/lights_bedroom/set") == 0) {
     index = 7;
     relayLightsBedroomState = newState;
-  } else if (strcmp(topic, "lights/lights_bedroom_balcony/set") == 0) {
+  } else if (strcmp(topic, "relays/lights_bedroom_balcony/set") == 0) {
     index = 8;
     relayLightsBedroomBalconyState = newState;
-  } else if (strcmp(topic, "lights/lights_upper_bedroom/set") == 0) {
+  } else if (strcmp(topic, "relays/lights_upper_bedroom/set") == 0) {
     index = 9;
     relayLightsUpperBedroomState = newState;
-  } else if (strcmp(topic, "lights/lights_service_area/set") == 0) {
+  } else if (strcmp(topic, "relays/lights_service_area/set") == 0) {
     index = 10;
     relayLightsServiceAreaState = newState;
-  } else if (strcmp(topic, "lights/lights_green_roof/set") == 0) {
+  } else if (strcmp(topic, "relays/lights_green_roof/set") == 0) {
     index = 11;
     relayLightsGreenRoofState = newState;
-  } else if (strcmp(topic, "lights/sockets_bedroom_left/set") == 0) {
+  } else if (strcmp(topic, "relays/sockets_bedroom_left/set") == 0) {
     index = 12;
     relaySocketsBedroomLeftState = newState;
-  } else if (strcmp(topic, "lights/sockets_bedroom_right/set") == 0) {
+  } else if (strcmp(topic, "relays/sockets_bedroom_right/set") == 0) {
     index = 13;
     relaySocketsBedroomRightState = newState;
   }
