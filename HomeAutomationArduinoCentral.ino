@@ -1,12 +1,9 @@
-
-/*
-  HomeAutomationArduinoCentral v1.0.1
-*/
 #include <PubSubClient.h>
 #include <DHT.h>
 #include <SPI.h>
 #include <Ethernet.h>
 
+//#define MQTT_MAX_PACKET_SIZE 512
 #define DHTPIN 6 // PINO DO SENSOR DHT22 (TEMPERATURA E UMIDADE)
 #define DHTTYPE DHT22   // DHT 22 (AM2302)
 DHT dht(DHTPIN, DHTTYPE);
@@ -181,7 +178,7 @@ String buildSensorsJson() {
   return data;
 }
 
-bool publishSwitchesStatus() {
+void publishSwitchesStatus() {
   String data = "{";
   data+="\n";
   data+="\"lights_room_balcony\": ";
@@ -241,9 +238,12 @@ bool publishSwitchesStatus() {
   data+="\n";
   data+="}";
   
-  char jsonStr[200];
-  data.toCharArray(jsonStr,200);
-  return client.publish("switches/status", jsonStr, true);
+  char jsonStr[400];
+  data.toCharArray(jsonStr,400);
+  Serial.println(jsonStr);
+  boolean pubresult = client.publish("switches/status", jsonStr, true);
+  if (!pubresult)
+      Serial.println("unsuccessfully sent switches/status");
 }
 
 void publishSensorsStatus() {  
@@ -258,7 +258,7 @@ void publishSensorsStatus() {
     Serial.print("sending ");
     Serial.println(jsonStr);
     if (!pubresult)
-      Serial.println("unsuccessfully sent");
+      Serial.println("unsuccessfully sent sensors/status");
   } else {
     Serial.println("Failed to read from DHT");
   }
