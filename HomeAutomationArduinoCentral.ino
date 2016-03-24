@@ -2,8 +2,8 @@
 #include <DHT.h>
 #include <SPI.h>
 #include <Ethernet.h>
+#include <stdlib.h>
 
-//#define MQTT_MAX_PACKET_SIZE 512
 #define DHTPIN 6 // PINO DO SENSOR DHT22 (TEMPERATURA E UMIDADE)
 #define DHTTYPE DHT22   // DHT 22 (AM2302)
 DHT dht(DHTPIN, DHTTYPE);
@@ -52,16 +52,16 @@ const long debounceDelay = 50;
 const unsigned long statusIntervalRepeat = 1800000UL;
 
 IPAddress ip(192, 168, 0, 120);
+IPAddress gateway(192, 168, 0, 1);
+IPAddress subnet(255, 255, 255, 0);
 IPAddress server(192, 168, 0, 105);
 EthernetClient ethClient;
-PubSubClient client(ethClient);
+PubSubClient client;
 
 int buttonStates[14] = {LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW};
 int lastButtonStates[14] = {LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW};
 long lastDebounceTimes[14] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 long lastStatusSentTime = 0;
-float temperature = 0.0;
-float humidity = 0.0;
 bool firstLoopExecuted = false;
 
 int relayLightsRoomBalconyState = LOW;
@@ -80,7 +80,7 @@ int relaySocketsBedroomLeftState = LOW;
 int relaySocketsBedroomRightState = LOW;
 
 void setup() {
-  Serial.begin(57600);
+  //Serial.begin(57600);
 
   for (int i=0; i<14; i++) {
     pinMode(buttonPins[i], INPUT);
@@ -91,22 +91,25 @@ void setup() {
     pinMode(outputPins[i], OUTPUT);
     digitalWrite(outputPins[i], LOW);
   }
-  
-  client.setServer(server, 1883);
-  client.setCallback(callback);
-  
-  Ethernet.begin(mac, ip);
 
   dht.begin();
+
+  Ethernet.begin(mac, ip);
+  
+  delay(2000);
+  
+  client.setClient(ethClient);
+  client.setServer(server, 1883);
+  client.setCallback(callback);
 
   delay(1500);
 }
 
 void loop() {
-  if (!client.connected()) {
+  if (!client.loop()) {
+    client.disconnect();
     reconnect();
   }
-  client.loop();
 
   if (!firstLoopExecuted) {
     publishSensorsStatus();
@@ -164,99 +167,35 @@ void loop() {
   }
 }
 
-String buildSensorsJson() {
-  String data = "{";
-  data+="\n";
-  data+="\"temperature\": ";
-  data+=temperature;
-  data+= ",";
-  data+="\n";
-  data+="\"humidity\": ";
-  data+=humidity;
-  data+="\n";
-  data+="}";
-  return data;
-}
-
 void publishSwitchesStatus() {
-  String data = "{";
-  data+="\n";
-  data+="\"lights_room_balcony\": ";
-  data+=relayLightsRoomBalconyState == LOW ? "0" : "1";
-  data+= ",";
-  data+="\n";
-  data+="\"lights_room\": ";
-  data+=relayLightsRoomState == LOW ? "0" : "1";
-  data+= ",";
-  data+="\n";
-  data+="\"lights_room_kitchen\": ";
-  data+=relayLightsRoomKitchenState == LOW ? "0" : "1";
-  data+= ",";
-  data+="\n";
-  data+="\"lights_kitchen\": ";
-  data+=relayLightsKitchenState == LOW ? "0" : "1";
-  data+= ",";
-  data+="\n";
-  data+="\"lights_bathroom\": ";
-  data+=relayLightsBathroomState == LOW ? "0" : "1";
-  data+= ",";
-  data+="\n";
-  data+="\"lights_bathroom_mirror\": ";
-  data+=relayLightsBathroomMirrorState == LOW ? "0" : "1";
-  data+= ",";
-  data+="\n";
-  data+="\"lights_entry_balcony\": ";
-  data+=relayLightsEntryBalconyState == LOW ? "0" : "1";
-  data+= ",";
-  data+="\n";
-  data+="\"lights_bedroom\": ";
-  data+=relayLightsBedroomState == LOW ? "0" : "1";
-  data+= ",";
-  data+="\n";
-  data+="\"lights_bedroom_balcony\": ";
-  data+=relayLightsBedroomBalconyState == LOW ? "0" : "1";
-  data+= ",";
-  data+="\n";
-  data+="\"lights_upper_bedroom\": ";
-  data+=relayLightsUpperBedroomState == LOW ? "0" : "1";
-  data+= ",";
-  data+="\n";
-  data+="\"lights_service_area\": ";
-  data+=relayLightsServiceAreaState == LOW ? "0" : "1";
-  data+= ",";
-  data+="\n";
-  data+="\"lights_green_roof\": ";
-  data+=relayLightsGreenRoofState == LOW ? "0" : "1";
-  data+= ",";
-  data+="\n";
-  data+="\"sockets_bedroom_left\": ";
-  data+=relaySocketsBedroomLeftState == LOW ? "0" : "1";
-  data+= ",";
-  data+="\n";
-  data+="\"sockets_bedroom_right\": ";
-  data+=relaySocketsBedroomRightState == LOW ? "0" : "1";
-  data+="\n";
-  data+="}";
-  
-  char jsonStr[400];
-  data.toCharArray(jsonStr,400);
-  Serial.println(jsonStr);
-  boolean pubresult = client.publish("switches/status", jsonStr, true);
+  byte message[14] = { byte(relayLightsRoomBalconyState == HIGH), 
+    byte(relayLightsRoomState == HIGH),
+    byte(relayLightsRoomKitchenState == HIGH),
+    byte(relayLightsKitchenState == HIGH),
+    byte(relayLightsBathroomState == HIGH),
+    byte(relayLightsBathroomMirrorState == HIGH),
+    byte(relayLightsEntryBalconyState == HIGH),
+    byte(relayLightsBedroomState == HIGH),
+    byte(relayLightsBedroomBalconyState == HIGH),
+    byte(relayLightsUpperBedroomState == HIGH),
+    byte(relayLightsServiceAreaState == HIGH),
+    byte(relayLightsGreenRoofState == HIGH),
+    byte(relaySocketsBedroomLeftState == HIGH),
+    byte(relaySocketsBedroomRightState == HIGH)};
+  boolean pubresult = client.publish("switches/status", message, 14);
   if (!pubresult)
       Serial.println("unsuccessfully sent switches/status");
 }
 
 void publishSensorsStatus() {  
-  humidity = dht.readHumidity();
-  temperature = dht.readTemperature();
+  float humidity = dht.readHumidity();
+  float temperature = dht.readTemperature();
   if (!isnan(temperature) && !isnan(humidity)) {
-    String json = buildSensorsJson();
-    char jsonStr[200];
-    json.toCharArray(jsonStr,200);
-    
-    boolean pubresult = client.publish(sensorsStatusTopicName, jsonStr, true);
-    Serial.print("sending ");
-    Serial.println(jsonStr);
+    char outstr[15];
+    dtostrf(temperature, 5, 1, outstr);
+    boolean pubresult = client.publish("sensors/temperature", outstr);
+    dtostrf(humidity, 5, 1, outstr);
+    client.publish("sensors/humidity", outstr);
     if (!pubresult)
       Serial.println("unsuccessfully sent sensors/status");
   } else {
