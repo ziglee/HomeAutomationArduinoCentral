@@ -13,36 +13,37 @@ byte mac[] = {
 };
 
 const int buttonPins[] = {
-    22, //buttons/lighs_room_balcony
-    23, //buttons/lighs_room
-    24, //buttons/lighs_room_kitchen
-    25, //buttons/lighs_kitchen
-    26, //buttons/lighs_bathroom
-    27, //buttons/lighs_bathroom_mirror
-    28, //buttons/lighs_entry_balcony
-    29, //buttons/lighs_bedroom
-    30, //buttons/lighs_bedroom_balcony
-    31, //buttons/lighs_upper_bedroom
-    32, //buttons/lighs_service_area
-    33, //buttons/lighs_green_roof
-    34, //buttons/sockets_bedroom_left
-    35  //buttons/sockets_bedroom_right
+    22, //buttons/room_out_1
+    23, //buttons/room_out_2
+    24, //buttons/room_1
+    25, //buttons/room_2
+    26, //buttons/corridor_1
+    27, //buttons/corridor_2
+    28, //buttons/bathroom
+    29, //buttons/bedroom
+    30, //buttons/bedroom_out_1
+    31, //buttons/bedroom_out_2
+    32, //buttons/bedroom_porch
+    33, //buttons/bed_left
+    34, //buttons/bed_right
+    35, //buttons/upper_1
+    36, //buttons/upper_2
+    37, //buttons/entry
+    38  //buttons/laundry
   };
 const int outputPins[] = {
-    36, //relays/lighs_room_balcony
-    37, //relays/lighs_room
-    38, //relays/lighs_room_kitchen
-    39, //relays/lighs_kitchen
-    40, //relays/lighs_bathroom
-    41, //relays/lighs_bathroom_mirror
-    42, //relays/lighs_entry_balcony
-    43, //relays/lighs_bedroom
-    44, //relays/lighs_bedroom_balcony
-    45, //relays/lighs_upper_bedroom
-    46, //relays/lighs_service_area
-    47, //relays/lighs_green_roof
-    48, //relays/sockets_bedroom_left
-    49  //relays/sockets_bedroom_right
+    39, //relays/room_porch
+    40, //relays/room
+    41, //relays/counter
+    42, //relays/kitchen
+    43, //relays/bathroom
+    44, //relays/corridor
+    45, //relays/entry
+    46, //relays/bedroom
+    47, //relays/bedroom_porch
+    48, //relays/laundry
+    49, //relays/upper
+    50  //relays/recreation
   };
 const char clientName[] = "arduino:home";
 const char sensorsStatusTopicName[] = "sensors/status";
@@ -51,58 +52,65 @@ const char switchesStatusTopicName[] = "switches/status";
 const long debounceDelay = 50;
 const unsigned long statusIntervalRepeat = 1800000UL;
 
-IPAddress ip(192, 168, 0, 120);
-IPAddress gateway(192, 168, 0, 1);
+IPAddress ip(192, 168, 100, 120);
+IPAddress gateway(192, 168, 100, 1);
 IPAddress subnet(255, 255, 255, 0);
-IPAddress server(192, 168, 0, 105);
+IPAddress server(192, 168, 100, 125);
 EthernetClient ethClient;
 PubSubClient client;
 
-int buttonStates[14] = {LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW};
-int lastButtonStates[14] = {LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW};
-long lastDebounceTimes[14] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+int buttonStates[17] = { LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW };
+int lastButtonStates[17] = { LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW };
+long lastDebounceTimes[17] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 long lastStatusSentTime = 0;
 bool firstLoopExecuted = false;
 
-int relayLightsRoomBalconyState = LOW;
-int relayLightsRoomState = LOW;
-int relayLightsRoomKitchenState = LOW;
-int relayLightsKitchenState = LOW;
-int relayLightsBathroomState = LOW;
-int relayLightsBathroomMirrorState = LOW;
-int relayLightsEntryBalconyState = LOW;
-int relayLightsBedroomState = LOW;
-int relayLightsBedroomBalconyState = LOW;
-int relayLightsUpperBedroomState = LOW;
-int relayLightsServiceAreaState = LOW;
-int relayLightsGreenRoofState = LOW;
-int relaySocketsBedroomLeftState = LOW;
-int relaySocketsBedroomRightState = LOW;
+int relayRoomPorchState = HIGH;
+int relayRoomState = HIGH;
+int relayCounterState = HIGH;
+int relayKitchenState = HIGH;
+int relayBathroomState = HIGH;
+int relayCorridorState = HIGH;
+int relayEntryState = HIGH;
+int relayBedroomState = HIGH;
+int relayBedroomPorchState = HIGH;
+int relayLaundryState = HIGH;
+int relayUpperState = HIGH;
+int relayRecreationState = HIGH;
 
 void setup() {
-  //Serial.begin(57600);
+  delay(1000);
+  
+  Serial.begin(57600);
 
-  for (int i=0; i<14; i++) {
+  Serial.println("Setup in progress...");
+
+  Serial.println("Setting input pins...");
+  for (int i=0; i<17; i++) {
     pinMode(buttonPins[i], INPUT);
     lastDebounceTimes[i] = millis() - 1000;
   }
-  
-  for (int i=0; i<14; i++) {
+
+  Serial.println("Setting output pins...");
+  for (int i=0; i<12; i++) {
     pinMode(outputPins[i], OUTPUT);
-    digitalWrite(outputPins[i], LOW);
+    digitalWrite(outputPins[i], HIGH);
   }
 
+  Serial.println("Setting DHT sensor...");
   dht.begin();
 
+  Serial.println("Setting Ethernet...");
   Ethernet.begin(mac, ip);
   
-  delay(2000);
-  
+  delay(1000);
+
+  Serial.println("MQTT client...");
   client.setClient(ethClient);
   client.setServer(server, 1883);
   client.setCallback(callback);
 
-  delay(1500);
+  delay(1000);
 }
 
 void loop() {
@@ -122,7 +130,7 @@ void loop() {
     lastStatusSentTime = millis();
   }
 
-  for (int i=0; i<14; i++) {
+  for (int i=0; i<16; i++) {
     int reading = digitalRead(buttonPins[i]);
     if (reading != lastButtonStates[i]) {
       lastDebounceTimes[i] = millis();
@@ -132,33 +140,39 @@ void loop() {
         buttonStates[i] = reading;
         if (reading == HIGH) {
           if (i == 0) {
-            client.publish("buttons/lights_room_balcony", "1");
+            client.publish("buttons/room_out_1", "1");
           } else if (i == 1) {
-            client.publish("buttons/lights_room", "1");
+            client.publish("buttons/room_out_2", "1");
           } else if (i == 2) {
-            client.publish("buttons/lights_room_kitchen", "1");
+            client.publish("buttons/room_1", "1");
           } else if (i == 3) {
-            client.publish("buttons/lights_kitchen", "1");
+            client.publish("buttons/room_2", "1");
           } else if (i == 4) {
-            client.publish("buttons/lights_bathroom", "1");
+            client.publish("buttons/corridor_1", "1");
           } else if (i == 5) {
-            client.publish("buttons/lights_bathroom_mirror", "1");
+            client.publish("buttons/corridor_2", "1");
           } else if (i == 6) {
-            client.publish("buttons/lights_entry_balcony", "1");
+            client.publish("buttons/bathroom", "1");
           } else if (i == 7) {
-            client.publish("buttons/lights_bedroom", "1");
+            client.publish("buttons/bedroom", "1");
           } else if (i == 8) {
-            client.publish("buttons/lights_bedroom_balcony", "1");
+            client.publish("buttons/bedroom_out_1", "1");
           } else if (i == 9) {
-            client.publish("buttons/lights_upper_bedroom", "1");
+            client.publish("buttons/bedroom_out_2", "1");
           } else if (i == 10) {
-            client.publish("buttons/lights_service_area", "1");
+            client.publish("buttons/bedroom_porch", "1");
           } else if (i == 11) {
-            client.publish("buttons/lights_green_roof", "1");
+            client.publish("buttons/bed_left", "1");
           } else if (i == 12) {
-            client.publish("buttons/sockets_bedroom_left", "1");
+            client.publish("buttons/bed_right", "1");
           } else if (i == 13) {
-            client.publish("buttons/sockets_bedroom_right", "1");
+            client.publish("buttons/upper_1", "1");
+          } else if (i == 14) {
+            client.publish("buttons/upper_2", "1");
+          } else if (i == 15) {
+            client.publish("buttons/entry", "1");
+          } else if (i == 16) {
+            client.publish("buttons/laundry", "1");
           }
         }
       }
@@ -168,21 +182,19 @@ void loop() {
 }
 
 void publishSwitchesStatus() {
-  byte message[14] = { byte(relayLightsRoomBalconyState == HIGH), 
-    byte(relayLightsRoomState == HIGH),
-    byte(relayLightsRoomKitchenState == HIGH),
-    byte(relayLightsKitchenState == HIGH),
-    byte(relayLightsBathroomState == HIGH),
-    byte(relayLightsBathroomMirrorState == HIGH),
-    byte(relayLightsEntryBalconyState == HIGH),
-    byte(relayLightsBedroomState == HIGH),
-    byte(relayLightsBedroomBalconyState == HIGH),
-    byte(relayLightsUpperBedroomState == HIGH),
-    byte(relayLightsServiceAreaState == HIGH),
-    byte(relayLightsGreenRoofState == HIGH),
-    byte(relaySocketsBedroomLeftState == HIGH),
-    byte(relaySocketsBedroomRightState == HIGH)};
-  boolean pubresult = client.publish("switches/status", message, 14);
+  byte message[12] = { byte(relayRoomPorchState == LOW), 
+    byte(relayRoomState == LOW),
+    byte(relayCounterState == LOW),
+    byte(relayKitchenState == LOW),
+    byte(relayBathroomState == LOW),
+    byte(relayCorridorState == LOW),
+    byte(relayEntryState == LOW),
+    byte(relayBedroomState == LOW),
+    byte(relayBedroomPorchState == LOW),
+    byte(relayLaundryState == LOW),
+    byte(relayUpperState == LOW),
+    byte(relayRecreationState == LOW)};
+  boolean pubresult = client.publish("switches/status", message, 12);
   if (!pubresult)
       Serial.println("unsuccessfully sent switches/status");
 }
@@ -212,50 +224,44 @@ void callback(char* topic, byte* payload, unsigned int length) {
   Serial.println();
 
   int index = -1;
-  int newState = payload[0] == '1' ? HIGH : LOW;
+  int newState = payload[0] == '1' ? LOW : HIGH;
   
-  if (strcmp(topic, "relays/lights_room_balcony/set") == 0) {
+  if (strcmp(topic, "relays/room_porch/set") == 0) {
     index = 0;
-    relayLightsRoomBalconyState = newState;
-  } else if (strcmp(topic, "relays/lights_room/set") == 0) {
+    relayRoomPorchState = newState;
+  } else if (strcmp(topic, "relays/room/set") == 0) {
     index = 1;
-    relayLightsRoomState = newState;
-  } else if (strcmp(topic, "relays/lights_room_kitchen/set") == 0) {
+    relayRoomState = newState;
+  } else if (strcmp(topic, "relays/counter/set") == 0) {
     index = 2;
-    relayLightsRoomKitchenState = newState;
-  } else if (strcmp(topic, "relays/lights_kitchen/set") == 0) {
+    relayCounterState = newState;
+  } else if (strcmp(topic, "relays/kitchen/set") == 0) {
     index = 3;
-    relayLightsKitchenState = newState;
-  } else if (strcmp(topic, "relays/lights_bathroom/set") == 0) {
+    relayKitchenState = newState;
+  } else if (strcmp(topic, "relays/bathroom/set") == 0) {
     index = 4;
-    relayLightsBathroomState = newState;
-  } else if (strcmp(topic, "relays/lights_bathroom_mirror/set") == 0) {
+    relayBathroomState = newState;
+  } else if (strcmp(topic, "relays/corridor/set") == 0) {
     index = 5;
-    relayLightsBathroomMirrorState = newState;
-  } else if (strcmp(topic, "relays/lights_entry_balcony/set") == 0) {
+    relayCorridorState = newState;
+  } else if (strcmp(topic, "relays/entry/set") == 0) {
     index = 6;
-    relayLightsEntryBalconyState = newState;
-  } else if (strcmp(topic, "relays/lights_bedroom/set") == 0) {
+    relayEntryState = newState;
+  } else if (strcmp(topic, "relays/bedroom/set") == 0) {
     index = 7;
-    relayLightsBedroomState = newState;
-  } else if (strcmp(topic, "relays/lights_bedroom_balcony/set") == 0) {
+    relayBedroomState = newState;
+  } else if (strcmp(topic, "relays/bedroom_porch/set") == 0) {
     index = 8;
-    relayLightsBedroomBalconyState = newState;
-  } else if (strcmp(topic, "relays/lights_upper_bedroom/set") == 0) {
+    relayBedroomPorchState = newState;
+  } else if (strcmp(topic, "relays/laundry/set") == 0) {
     index = 9;
-    relayLightsUpperBedroomState = newState;
-  } else if (strcmp(topic, "relays/lights_service_area/set") == 0) {
+    relayLaundryState = newState;
+  } else if (strcmp(topic, "relays/upper/set") == 0) {
     index = 10;
-    relayLightsServiceAreaState = newState;
-  } else if (strcmp(topic, "relays/lights_green_roof/set") == 0) {
+    relayUpperState = newState;
+  } else if (strcmp(topic, "relays/recreation/set") == 0) {
     index = 11;
-    relayLightsGreenRoofState = newState;
-  } else if (strcmp(topic, "relays/sockets_bedroom_left/set") == 0) {
-    index = 12;
-    relaySocketsBedroomLeftState = newState;
-  } else if (strcmp(topic, "relays/sockets_bedroom_right/set") == 0) {
-    index = 13;
-    relaySocketsBedroomRightState = newState;
+    relayRecreationState = newState;
   }
 
   if (index >= 0) {
@@ -269,20 +275,18 @@ void reconnect() {
     Serial.print("Attempting MQTT connection...");
     if (client.connect(clientName)) {
       Serial.println("connected");
-      client.subscribe("relays/lights_room_balcony/set");
-      client.subscribe("relays/lights_room/set");
-      client.subscribe("relays/lights_room_kitchen/set");
-      client.subscribe("relays/lights_kitchen/set");
-      client.subscribe("relays/lights_bathroom/set");
-      client.subscribe("relays/lights_bathroom_mirror/set");
-      client.subscribe("relays/lights_entry_balcony/set");
-      client.subscribe("relays/lights_bedroom/set");
-      client.subscribe("relays/lights_bedroom_balcony/set");
-      client.subscribe("relays/lights_upper_bedroom/set");
-      client.subscribe("relays/lights_service_area/set");
-      client.subscribe("relays/lights_green_roof/set");
-      client.subscribe("relays/sockets_bedroom_left/set");
-      client.subscribe("relays/sockets_bedroom_right/set");
+      client.subscribe("relays/room_porch/set");
+      client.subscribe("relays/room/set");
+      client.subscribe("relays/counter/set");
+      client.subscribe("relays/kitchen/set");
+      client.subscribe("relays/bathroom/set");
+      client.subscribe("relays/corridor/set");
+      client.subscribe("relays/entry/set");
+      client.subscribe("relays/bedroom/set");
+      client.subscribe("relays/bedroom_porch/set");
+      client.subscribe("relays/laundry/set");
+      client.subscribe("relays/upper/set");
+      client.subscribe("relays/recreation/set");
     } else {
       Serial.print("failed, rc=");
       Serial.print(client.state());
