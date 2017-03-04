@@ -32,18 +32,18 @@ const int buttonPins[] = {
     38  //buttons/laundry
   };
 const int outputPins[] = {
-    39, //relays/room_porch
-    40, //relays/room
-    41, //relays/counter
-    42, //relays/kitchen
-    43, //relays/bathroom
-    44, //relays/corridor
-    45, //relays/entry
-    46, //relays/bedroom
-    47, //relays/bedroom_porch
-    48, //relays/laundry
-    49, //relays/upper
-    50  //relays/recreation
+    39,
+    40,
+    42,
+    44,
+    43,
+    45,
+    46,
+    41,
+    47,
+    48,
+    49,
+    7
   };
 const char clientName[] = "arduino:home";
 const char sensorsStatusTopicName[] = "sensors/status";
@@ -59,8 +59,8 @@ IPAddress server(192, 168, 100, 125);
 EthernetClient ethClient;
 PubSubClient client;
 
-int buttonStates[17] = { LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW };
-int lastButtonStates[17] = { LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW };
+int buttonStates[17] = { HIGH, HIGH, HIGH, HIGH, HIGH, HIGH, HIGH, HIGH, HIGH, HIGH, HIGH, HIGH, HIGH, HIGH, HIGH, HIGH, HIGH };
+int lastButtonStates[17] = { HIGH, HIGH, HIGH, HIGH, HIGH, HIGH, HIGH, HIGH, HIGH, HIGH, HIGH, HIGH, HIGH, HIGH, HIGH, HIGH };
 long lastDebounceTimes[17] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 long lastStatusSentTime = 0;
 bool firstLoopExecuted = false;
@@ -81,13 +81,13 @@ int relayRecreationState = HIGH;
 void setup() {
   delay(1000);
   
-  Serial.begin(57600);
+  Serial.begin(9600);
 
   Serial.println("Setup in progress...");
 
   Serial.println("Setting input pins...");
   for (int i=0; i<17; i++) {
-    pinMode(buttonPins[i], INPUT);
+    pinMode(buttonPins[i], INPUT_PULLUP);
     lastDebounceTimes[i] = millis() - 1000;
   }
 
@@ -131,14 +131,17 @@ void loop() {
   }
 
   for (int i=0; i<16; i++) {
+    Serial.print(i);
+    Serial.print(":");
     int reading = digitalRead(buttonPins[i]);
     if (reading != lastButtonStates[i]) {
       lastDebounceTimes[i] = millis();
     }
+    Serial.println(reading);
     if ((millis() - lastDebounceTimes[i]) > debounceDelay) {
       if (reading != buttonStates[i]) {
         buttonStates[i] = reading;
-        if (reading == HIGH) {
+        if (reading == LOW) {
           if (i == 0) {
             client.publish("buttons/room_out_1", "1");
           } else if (i == 1) {
