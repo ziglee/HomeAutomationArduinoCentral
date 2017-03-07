@@ -32,18 +32,18 @@ const int buttonPins[] = {
     38  //buttons/laundry
   };
 const int outputPins[] = {
-    39,
-    40,
-    42,
-    44,
-    43,
-    45,
-    46,
-    41,
-    47,
-    48,
-    49,
-    7
+    39, // room
+    40, // bedroom_porch
+    41, // bedroom
+    42, // counter
+    43, // entry
+    44, // bathroom
+    45, // upper
+    46, // laundry
+    47, // room_porch
+    48, // recreation
+    49, // kitchen
+    7   // corridor
   };
 const char clientName[] = "arduino:home";
 const char sensorsStatusTopicName[] = "sensors/status";
@@ -219,56 +219,49 @@ void publishSensorsStatus() {
 }
 
 void callback(char* topic, byte* payload, unsigned int length) {
-  Serial.print(topic);
-  Serial.print(":");
-  for (int i=0;i<length;i++) {
-    Serial.print((char)payload[i]);
-  }
-  Serial.println();
-
-  int index = -1;
+  int outputPin = -1;
   int newState = payload[0] == '1' ? LOW : HIGH;
   
   if (strcmp(topic, "relays/room_porch/set") == 0) {
-    index = 0;
+    outputPin = 47; // OK
     relayRoomPorchState = newState;
   } else if (strcmp(topic, "relays/room/set") == 0) {
-    index = 1;
+    outputPin = 39; // OK
     relayRoomState = newState;
   } else if (strcmp(topic, "relays/counter/set") == 0) {
-    index = 2;
+    outputPin = 42; // OK
     relayCounterState = newState;
   } else if (strcmp(topic, "relays/kitchen/set") == 0) {
-    index = 3;
+    outputPin = 49; // OK
     relayKitchenState = newState;
   } else if (strcmp(topic, "relays/bathroom/set") == 0) {
-    index = 4;
+    outputPin = 44; // OK
     relayBathroomState = newState;
   } else if (strcmp(topic, "relays/corridor/set") == 0) {
-    index = 5;
+    outputPin = 7; // OK
     relayCorridorState = newState;
   } else if (strcmp(topic, "relays/entry/set") == 0) {
-    index = 6;
+    outputPin = 43; // OK
     relayEntryState = newState;
-  } else if (strcmp(topic, "relays/bedroom/set") == 0) {
-    index = 7;
+  } else if (strcmp(topic, "relays/bedroom/set") == 0) { // OK
+    outputPin = 41; // OK
     relayBedroomState = newState;
   } else if (strcmp(topic, "relays/bedroom_porch/set") == 0) {
-    index = 8;
+    outputPin = 40; // OK
     relayBedroomPorchState = newState;
   } else if (strcmp(topic, "relays/laundry/set") == 0) {
-    index = 9;
+    outputPin = 46; // OK
     relayLaundryState = newState;
   } else if (strcmp(topic, "relays/upper/set") == 0) {
-    index = 10;
+    outputPin = 45; // OK
     relayUpperState = newState;
   } else if (strcmp(topic, "relays/recreation/set") == 0) {
-    index = 11;
+    outputPin = 48; // OK
     relayRecreationState = newState;
   }
 
-  if (index >= 0) {
-    digitalWrite(outputPins[index], newState);
+  if (outputPin >= 0) {
+    digitalWrite(outputPin, newState);
     publishSwitchesStatus();
   }
 }
