@@ -6,51 +6,83 @@
 
 #define DHTPIN 6 // PINO DO SENSOR DHT22 (TEMPERATURA E UMIDADE)
 #define DHTTYPE DHT22   // DHT 22 (AM2302)
-DHT dht(DHTPIN, DHTTYPE);
+
+#define RELAY_ROOM_PIN 39
+#define RELAY_BEDROOM_PORCH_PIN 40
+#define RELAY_BEDROOM_PIN 41
+#define RELAY_COUNTER_PIN 42
+#define RELAY_ENTRY_PIN 43
+#define RELAY_BATHROOM_PIN 44
+#define RELAY_UPPER_PIN 45
+#define RELAY_LAUNDRY_PIN 46
+#define RELAY_ROOM_PORCH_PIN 47
+#define RELAY_RECREATION_PIN 48
+#define RELAY_KITCHEN_PIN 49
+#define RELAY_CORRIDOR_PIN 7
+
+#define BUTTON_ROOM_OUT_1_PIN 22
+#define BUTTON_ROOM_OUT_2_PIN 23
+#define BUTTON_ROOM_1_PIN 24
+#define BUTTON_ROOM_2_PIN 25
+#define BUTTON_CORRIDOR_1_PIN 26
+#define BUTTON_CORRIDOR_2_PIN 27
+#define BUTTON_BATHROOM_PIN 28
+#define BUTTON_BEDROOM_PIN 29
+#define BUTTON_BEDROOM_OUT_1_PIN 30
+#define BUTTON_BEDROOM_OUT_2_PIN 31
+#define BUTTON_BEDROOM_PORCH_PIN 32
+#define BUTTON_BED_LEFT_PIN 33
+#define BUTTON_BED_RIGHT_PIN 34
+#define BUTTON_UPPER_1_PIN 35
+#define BUTTON_UPPER_2_PIN 36
+#define BUTTON_ENTRY_PIN 37
+#define BUTTON_LAUNDRY_PIN 38
 
 byte mac[] = {
   0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED
 };
 
 const int buttonPins[] = {
-    22, //buttons/room_out_1
-    23, //buttons/room_out_2
-    24, //buttons/room_1
-    25, //buttons/room_2
-    26, //buttons/corridor_1
-    27, //buttons/corridor_2
-    28, //buttons/bathroom
-    29, //buttons/bedroom
-    30, //buttons/bedroom_out_1
-    31, //buttons/bedroom_out_2
-    32, //buttons/bedroom_porch
-    33, //buttons/bed_left
-    34, //buttons/bed_right
-    35, //buttons/upper_1
-    36, //buttons/upper_2
-    37, //buttons/entry
-    38  //buttons/laundry
+    BUTTON_ROOM_OUT_1_PIN,
+    BUTTON_ROOM_OUT_2_PIN,
+    BUTTON_ROOM_1_PIN,
+    BUTTON_ROOM_2_PIN,
+    BUTTON_CORRIDOR_1_PIN,
+    BUTTON_CORRIDOR_2_PIN,
+    BUTTON_BATHROOM_PIN,
+    BUTTON_BEDROOM_PIN,
+    BUTTON_BEDROOM_OUT_1_PIN,
+    BUTTON_BEDROOM_OUT_2_PIN,
+    BUTTON_BEDROOM_PORCH_PIN,
+    BUTTON_BED_LEFT_PIN,
+    BUTTON_BED_RIGHT_PIN,
+    BUTTON_UPPER_1_PIN,
+    BUTTON_UPPER_2_PIN,
+    BUTTON_ENTRY_PIN,
+    BUTTON_LAUNDRY_PIN
   };
+  
 const int outputPins[] = {
-    39, // room
-    40, // bedroom_porch
-    41, // bedroom
-    42, // counter
-    43, // entry
-    44, // bathroom
-    45, // upper
-    46, // laundry
-    47, // room_porch
-    48, // recreation
-    49, // kitchen
-    7   // corridor
+    RELAY_ROOM_PIN,
+    RELAY_BEDROOM_PORCH_PIN,
+    RELAY_BEDROOM_PIN,
+    RELAY_COUNTER_PIN,
+    RELAY_ENTRY_PIN,
+    RELAY_BATHROOM_PIN,
+    RELAY_UPPER_PIN,
+    RELAY_LAUNDRY_PIN,
+    RELAY_ROOM_PORCH_PIN,
+    RELAY_RECREATION_PIN,
+    RELAY_KITCHEN_PIN,
+    RELAY_CORRIDOR_PIN
   };
+  
 const char clientName[] = "arduino:home";
-const char sensorsStatusTopicName[] = "sensors/status";
-const char switchesStatusTopicName[] = "switches/status";
 
 const long debounceDelay = 50;
 const unsigned long statusIntervalRepeat = 1800000UL;
+
+DHT dht(DHTPIN, DHTTYPE);
 
 IPAddress ip(192, 168, 100, 120);
 IPAddress gateway(192, 168, 100, 1);
@@ -131,50 +163,51 @@ void loop() {
   }
 
   for (int i=0; i<16; i++) {
-    Serial.print(i);
-    Serial.print(":");
     int reading = digitalRead(buttonPins[i]);
     if (reading != lastButtonStates[i]) {
       lastDebounceTimes[i] = millis();
     }
-    Serial.println(reading);
+    
     if ((millis() - lastDebounceTimes[i]) > debounceDelay) {
       if (reading != buttonStates[i]) {
         buttonStates[i] = reading;
         if (reading == LOW) {
-          if (i == 0) {
+
+          Serial.println(buttonPins[i]); // REMOVER
+          
+          if (buttonPins[i] == BUTTON_ROOM_OUT_1_PIN) {
             client.publish("buttons/room_out_1", "1");
-          } else if (i == 1) {
+          } else if (buttonPins[i] == BUTTON_ROOM_OUT_2_PIN) {
             client.publish("buttons/room_out_2", "1");
-          } else if (i == 2) {
+          } else if (buttonPins[i] == BUTTON_ROOM_1_PIN) {
             client.publish("buttons/room_1", "1");
-          } else if (i == 3) {
+          } else if (buttonPins[i] == BUTTON_ROOM_2_PIN) {
             client.publish("buttons/room_2", "1");
-          } else if (i == 4) {
+          } else if (buttonPins[i] == BUTTON_CORRIDOR_1_PIN) {
             client.publish("buttons/corridor_1", "1");
-          } else if (i == 5) {
+          } else if (buttonPins[i] == BUTTON_CORRIDOR_2_PIN) {
             client.publish("buttons/corridor_2", "1");
-          } else if (i == 6) {
+          } else if (buttonPins[i] == BUTTON_BATHROOM_PIN) {
             client.publish("buttons/bathroom", "1");
-          } else if (i == 7) {
+          } else if (buttonPins[i] == BUTTON_BEDROOM_PIN) {
             client.publish("buttons/bedroom", "1");
-          } else if (i == 8) {
+          } else if (buttonPins[i] == BUTTON_BEDROOM_OUT_1_PIN) {
             client.publish("buttons/bedroom_out_1", "1");
-          } else if (i == 9) {
+          } else if (buttonPins[i] == BUTTON_BEDROOM_OUT_2_PIN) {
             client.publish("buttons/bedroom_out_2", "1");
-          } else if (i == 10) {
+          } else if (buttonPins[i] == BUTTON_BEDROOM_PORCH_PIN) {
             client.publish("buttons/bedroom_porch", "1");
-          } else if (i == 11) {
+          } else if (buttonPins[i] == BUTTON_BED_LEFT_PIN) {
             client.publish("buttons/bed_left", "1");
-          } else if (i == 12) {
+          } else if (buttonPins[i] == BUTTON_BED_RIGHT_PIN) {
             client.publish("buttons/bed_right", "1");
-          } else if (i == 13) {
+          } else if (buttonPins[i] == BUTTON_UPPER_1_PIN) {
             client.publish("buttons/upper_1", "1");
-          } else if (i == 14) {
+          } else if (buttonPins[i] == BUTTON_UPPER_2_PIN) {
             client.publish("buttons/upper_2", "1");
-          } else if (i == 15) {
+          } else if (buttonPins[i] == BUTTON_ENTRY_PIN) {
             client.publish("buttons/entry", "1");
-          } else if (i == 16) {
+          } else if (buttonPins[i] == BUTTON_LAUNDRY_PIN) {
             client.publish("buttons/laundry", "1");
           }
         }
@@ -185,7 +218,8 @@ void loop() {
 }
 
 void publishSwitchesStatus() {
-  byte message[12] = { byte(relayRoomPorchState == LOW), 
+  byte message[12] = { 
+    byte(relayRoomPorchState == LOW), 
     byte(relayRoomState == LOW),
     byte(relayCounterState == LOW),
     byte(relayKitchenState == LOW),
@@ -196,10 +230,13 @@ void publishSwitchesStatus() {
     byte(relayBedroomPorchState == LOW),
     byte(relayLaundryState == LOW),
     byte(relayUpperState == LOW),
-    byte(relayRecreationState == LOW)};
+    byte(relayRecreationState == LOW)
+  };
+  
   boolean pubresult = client.publish("switches/status", message, 12);
-  if (!pubresult)
-      Serial.println("unsuccessfully sent switches/status");
+  if (!pubresult) {
+    Serial.println("unsuccessfully sent switches/status");
+  }
 }
 
 void publishSensorsStatus() {  
@@ -207,12 +244,18 @@ void publishSensorsStatus() {
   float temperature = dht.readTemperature();
   if (!isnan(temperature) && !isnan(humidity)) {
     char outstr[15];
+    
     dtostrf(temperature, 5, 1, outstr);
-    boolean pubresult = client.publish("sensors/temperature", outstr);
+    boolean pubTemperatureResult = client.publish("sensors/temperature", outstr);
+    if (!pubTemperatureResult) {
+      Serial.println("unsuccessfully sent sensors/temperature");
+    }
+      
     dtostrf(humidity, 5, 1, outstr);
-    client.publish("sensors/humidity", outstr);
-    if (!pubresult)
-      Serial.println("unsuccessfully sent sensors/status");
+    boolean pubHumidityResult = client.publish("sensors/humidity", outstr);
+    if (!pubHumidityResult) {
+      Serial.println("unsuccessfully sent sensors/humidity");
+    } 
   } else {
     Serial.println("Failed to read from DHT");
   }
@@ -223,40 +266,40 @@ void callback(char* topic, byte* payload, unsigned int length) {
   int newState = payload[0] == '1' ? LOW : HIGH;
   
   if (strcmp(topic, "relays/room_porch/set") == 0) {
-    outputPin = 47; // OK
+    outputPin = RELAY_ROOM_PORCH_PIN;
     relayRoomPorchState = newState;
   } else if (strcmp(topic, "relays/room/set") == 0) {
-    outputPin = 39; // OK
+    outputPin = RELAY_ROOM_PIN;
     relayRoomState = newState;
   } else if (strcmp(topic, "relays/counter/set") == 0) {
-    outputPin = 42; // OK
+    outputPin = RELAY_COUNTER_PIN;
     relayCounterState = newState;
   } else if (strcmp(topic, "relays/kitchen/set") == 0) {
-    outputPin = 49; // OK
+    outputPin = RELAY_KITCHEN_PIN;
     relayKitchenState = newState;
   } else if (strcmp(topic, "relays/bathroom/set") == 0) {
-    outputPin = 44; // OK
+    outputPin = RELAY_BATHROOM_PIN;
     relayBathroomState = newState;
   } else if (strcmp(topic, "relays/corridor/set") == 0) {
-    outputPin = 7; // OK
+    outputPin = RELAY_CORRIDOR_PIN;
     relayCorridorState = newState;
   } else if (strcmp(topic, "relays/entry/set") == 0) {
-    outputPin = 43; // OK
+    outputPin = RELAY_ENTRY_PIN;
     relayEntryState = newState;
-  } else if (strcmp(topic, "relays/bedroom/set") == 0) { // OK
-    outputPin = 41; // OK
+  } else if (strcmp(topic, "relays/bedroom/set") == 0) {
+    outputPin = RELAY_BEDROOM_PIN;
     relayBedroomState = newState;
   } else if (strcmp(topic, "relays/bedroom_porch/set") == 0) {
-    outputPin = 40; // OK
+    outputPin = RELAY_BEDROOM_PORCH_PIN;
     relayBedroomPorchState = newState;
   } else if (strcmp(topic, "relays/laundry/set") == 0) {
-    outputPin = 46; // OK
+    outputPin = RELAY_LAUNDRY_PIN;
     relayLaundryState = newState;
   } else if (strcmp(topic, "relays/upper/set") == 0) {
-    outputPin = 45; // OK
+    outputPin = RELAY_UPPER_PIN;
     relayUpperState = newState;
   } else if (strcmp(topic, "relays/recreation/set") == 0) {
-    outputPin = 48; // OK
+    outputPin = RELAY_RECREATION_PIN;
     relayRecreationState = newState;
   }
 
@@ -286,7 +329,7 @@ void reconnect() {
     } else {
       Serial.print("failed, rc=");
       Serial.print(client.state());
-      Serial.println(" try again in 5 seconds");
+      Serial.println(" trying again in 5 seconds");
       delay(5000);
     }
   }
