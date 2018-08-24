@@ -32,9 +32,9 @@
 #define BUTTON_BEDROOM_OUT_2_PIN 35
 #define BUTTON_BEDROOM_PORCH_PIN 33
 #define BUTTON_BED_LEFT_PIN 37
-#define BUTTON_BED_RIGHT_PIN 33
-#define BUTTON_UPPER_1_PIN 28
-#define BUTTON_UPPER_2_PIN 34
+#define BUTTON_BED_RIGHT_PIN 38
+#define BUTTON_UPPER_1_PIN 34
+#define BUTTON_UPPER_2_PIN 23
 #define BUTTON_ENTRY_PIN 24
 #define BUTTON_LAUNDRY_PIN 25
 
@@ -84,10 +84,10 @@ const unsigned long statusIntervalRepeat = 1800000UL;
 
 DHT dht(DHTPIN, DHTTYPE);
 
-IPAddress ip(192, 168, 100, 120);
-IPAddress gateway(192, 168, 100, 1);
+IPAddress ip(192, 168, 0, 120);
+IPAddress gateway(192, 168, 0, 1);
 IPAddress subnet(255, 255, 255, 0);
-IPAddress server(192, 168, 100, 125);
+IPAddress server(192, 168, 0, 125);
 EthernetClient ethClient;
 PubSubClient client;
 
@@ -118,7 +118,7 @@ void setup() {
   Serial.println("Setup in progress...");
 
   Serial.println("Setting input pins...");
-  for (int i=0; i<17; i++) {
+  for (int i=0; i<=16; i++) {
     pinMode(buttonPins[i], INPUT_PULLUP);
     lastDebounceTimes[i] = millis() - 1000;
   }
@@ -162,7 +162,7 @@ void loop() {
     lastStatusSentTime = millis();
   }
 
-  for (int i=0; i<16; i++) {
+  for (int i=0; i<=16; i++) {
     int reading = digitalRead(buttonPins[i]);
     if (reading != lastButtonStates[i]) {
       lastDebounceTimes[i] = millis();
